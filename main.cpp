@@ -8,6 +8,17 @@ static void write_i32(ofstream& out, int32_t x) { out.write(reinterpret_cast<con
 static uint32_t read_u32(ifstream& in) { uint32_t x; in.read(reinterpret_cast<char*>(&x), sizeof(x)); return x; }
 static int32_t read_i32(ifstream& in) { int32_t x; in.read(reinterpret_cast<char*>(&x), sizeof(x)); return x; }
 
+static void save_db(const map<string, multiset<int>>& db) {
+    ofstream out(DB_FILE, ios::binary | ios::trunc);
+    write_u32(out, (uint32_t)db.size());
+    for (const auto& [k, ms] : db) {
+        write_u32(out, (uint32_t)k.size());
+        out.write(k.data(), k.size());
+        write_u32(out, (uint32_t)ms.size());
+        for (int v : ms) write_i32(out, v);
+    }
+}
+
 int main() {
     ios::sync_with_stdio(false);
     cin.tie(nullptr);
@@ -28,17 +39,6 @@ int main() {
         }
     }
 
-    auto flush = [&]() {
-        ofstream out(DB_FILE, ios::binary | ios::trunc);
-        write_u32(out, (uint32_t)db.size());
-        for (auto& [k, ms] : db) {
-            write_u32(out, (uint32_t)k.size());
-            out.write(k.data(), k.size());
-            write_u32(out, (uint32_t)ms.size());
-            for (int v : ms) write_i32(out, v);
-        }
-    };
-
     int n;
     if (!(cin >> n)) return 0;
     while (n--) {
@@ -47,7 +47,6 @@ int main() {
         if (op == "insert") {
             int v; cin >> v;
             db[key].insert(v);
-            flush();
         } else if (op == "delete") {
             int v; cin >> v;
             auto it = db.find(key);
@@ -56,10 +55,9 @@ int main() {
                 if (vit != it->second.end()) {
                     it->second.erase(vit);
                     if (it->second.empty()) db.erase(it);
-                    flush();
                 }
             }
-        } else if (op == "find") {
+        } else {
             auto it = db.find(key);
             if (it == db.end()) {
                 cout << "null\n";
@@ -74,5 +72,7 @@ int main() {
             }
         }
     }
+
+    save_db(db);
     return 0;
 }
